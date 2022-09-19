@@ -26,11 +26,13 @@ TEST_IMPL(get_memory) {
   uint64_t free_mem = uv_get_free_memory();
   uint64_t total_mem = uv_get_total_memory();
   uint64_t constrained_mem = uv_get_constrained_memory();
+  uint64_t available_mem = uv_get_available_memory();
 
-  printf("free_mem=%llu, total_mem=%llu, constrained_mem=%llu\n",
+  printf("free_mem=%llu, total_mem=%llu, constrained_mem=%llu, available_memo=%llu\n",
          (unsigned long long) free_mem,
          (unsigned long long) total_mem,
-         (unsigned long long) constrained_mem);
+         (unsigned long long) constrained_mem,
+         (unsigned long long) available_mem);
 
   ASSERT(free_mem > 0);
   ASSERT(total_mem > 0);
@@ -40,5 +42,6 @@ TEST_IMPL(get_memory) {
 #else
   ASSERT(total_mem > free_mem);
 #endif
+  ASSERT(available_mem <= free_mem);
   return 0;
 }

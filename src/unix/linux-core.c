@@ -794,13 +794,20 @@ static uint64_t uv__read_uint64(const char* filename) {
  * limit is unknown.
  */
 static uint64_t uv__get_constrained_memory_fallback(void) {
-  return uv__read_uint64("/sys/fs/cgroup/memory/memory.limit_in_bytes");
+  uint64_t limit;
+
+  limit = uv__read_uint64("/sys/fs/cgroup/memory/memory.limit_in_bytes");
+  if (limit == LONG_MAX / 4096 * 4096)
+    return 0;
+
+  return limit;
 }
 
 
 uint64_t uv_get_constrained_memory(void) {
   char filename[4097];
   char buf[1024];
+  uint64_t limit;
   uint64_t high;
   uint64_t max;
   char* p;
@@ -830,7 +837,53 @@ uint64_t uv_get_constrained_memory(void) {
   if (high == 0)
     return uv__get_constrained_memory_fallback();
 
-  return high < max ? high : max;
+  limit = high < max ? high : max;
+  if (limit == ~0ull)
+    return 0;
+  return limit;
+}
+
+
+static uint64_t uv__get_available_memory_fallback(void) {
+  uint64_t current;
+  uint64_t constrained;
+
+  constrained = uv__get_constrained_memory_fallback();
+  if (constrained == 0)
+    return uv_get_free_memory();
+
+  current = uv__read_uint64("/sys/fs/cgroup/memory/memory.usage_in_bytes");
+  return constrained - current;
+}
+
+
+uint64_t uv_get_available_memory(void) {
+  char filename[4097];
+  char buf[1024];
+  uint64_t current;
+  uint64_t constrained;
+  char* p;
+
+  constrained = uv_get_constrained_memory();
+  if (constrained == 0)
+    return uv__get_available_memory_fallback();
+
+  if (uv__slurp("/proc/self/cgroup", buf, sizeof(buf)))
+    return uv__get_available_memory_fallback();
+
+  if (memcmp(buf, "0::/", 4))
+    return uv__get_available_memory_fallback();
+
+  p = strchr(buf, '\n');
+  if (p != NULL)
+    *p = '\0';
+
+  p = buf + 4;
+
+  snprintf(filename, sizeof(filename), "/sys/fs/cgroup/%s/memory.current", p);
+  current = uv__read_uint64(filename);
+
+  return constrained - current;
 }
 
 
