@@ -20,6 +20,7 @@
  */
 
 #include "linux-syscalls.h"
+#include "internal.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
