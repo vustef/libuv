@@ -189,7 +189,7 @@ void uv_pipe_connect(uv_connect_t* req,
   size_t name_len;
 
   name_len = strlen(name);
-  
+
   if (name_len > sizeof(saddr.sun_path) - 1) {
     err = -ENAMETOOLONG;
     goto out;
@@ -371,7 +371,7 @@ int uv_pipe_chmod(uv_pipe_t* handle, int mode) {
   }
 
   /* stat must be used as fstat has a bug on Darwin */
-  if (stat(name_buffer, &pipe_stat) == -1) {
+  if (uv__stat(name_buffer, &pipe_stat) == -1) {
     uv__free(name_buffer);
     return -errno;
   }
