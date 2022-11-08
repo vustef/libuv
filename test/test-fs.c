@@ -317,7 +317,7 @@ static void chown_root_cb(uv_fs_t* req) {
     ASSERT(req->result == UV_EINVAL);
 #   elif defined(__PASE__)
     /* On IBMi PASE, there is no root user. uid 0 is user qsecofr.
-     * User may grant qsecofr's privileges, including changing 
+     * User may grant qsecofr's privileges, including changing
      * the file's ownership to uid 0.
      */
     ASSERT(req->result == 0 || req->result == UV_EPERM);
@@ -1290,6 +1290,8 @@ static int test_sendfile(void (*setup)(int), uv_fs_cb cb, off_t expected_size) {
   ASSERT(r == 0);
   uv_fs_req_cleanup(&close_req);
 
+  memset(&s1, 0, sizeof(s1));
+  memset(&s2, 0, sizeof(s2));
   ASSERT(0 == stat("test_file", &s1));
   ASSERT(0 == stat("test_file2", &s2));
   ASSERT(s2.st_size == expected_size);
@@ -1462,6 +1464,7 @@ TEST_IMPL(fs_fstat) {
   uv_fs_req_cleanup(&req);
 
 #ifndef _WIN32
+  memset(&t, 0, sizeof(t));
   ASSERT(0 == fstat(file, &t));
   ASSERT(0 == uv_fs_fstat(NULL, &req, file, NULL));
   ASSERT(req.result == 0);
@@ -3931,9 +3934,9 @@ static void test_fs_partial(int doread) {
   ctx.doread = doread;
   ctx.interval = 1000;
   ctx.size = sizeof(test_buf) * iovcount;
-  ctx.data = malloc(ctx.size);
+  ctx.data = calloc(ctx.size, 1);
   ASSERT_NOT_NULL(ctx.data);
-  buffer = malloc(ctx.size);
+  buffer = calloc(ctx.size, 1);
   ASSERT_NOT_NULL(buffer);
 
   for (index = 0; index < iovcount; ++index)
