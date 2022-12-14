@@ -856,18 +856,22 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
     /* XXX Future optimization: do EPOLL_CTL_MOD lazily if we stop watching
      * events, skip the syscall and squelch the events after epoll_wait().
      */
-    if (epoll_ctl(loop->ep, op, w->fd, &e)) {
-      if (errno != EEXIST)
-        abort();
+    if (!w->running) {
+      if (uv__epoll_ctl(loop->backend_fd, op, w->fd, &e)) {
+        if (errno != EEXIST)
+          abort();
 
-      assert(op == EPOLL_CTL_ADD);
+        assert(op == UV__EPOLL_CTL_ADD);
 
-      /* We've reactivated a file descriptor that's been watched before. */
-      if (epoll_ctl(loop->ep, EPOLL_CTL_MOD, w->fd, &e))
-        abort();
+        /* We've reactivated a file descriptor that's been watched before. */
+        if (uv__epoll_ctl(loop->backend_fd, UV__EPOLL_CTL_MOD, w->fd, &e))
+          abort();
+      }
+      w->events = w->pevents;
+    } else {
+      uv__epoll_ctl(loop->backend_fd, UV__EPOLL_CTL_DEL, w->fd, &e);
+      w->events = 0;
     }
-
-    w->events = w->pevents;
   }
 
   assert(timeout >= -1);
@@ -995,10 +999,13 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
          */
         if (w == &loop->signal_io_watcher) {
           have_signals = 1;
-        } else {
-          uv__metrics_update_idle_time(loop);
+        } else if(!w->running) {
+          w->running = 1;
+          /* can release lock and allow other threads to run the loop */
           w->cb(loop, w, pe->events);
+          w->running = 0;
         }
+
         nevents++;
       }
     }
