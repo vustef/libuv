@@ -1287,7 +1287,8 @@ static void uv__stream_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
   assert(stream->type == UV_TCP ||
          stream->type == UV_NAMED_PIPE ||
          stream->type == UV_TTY);
-  assert(!(stream->flags & UV_HANDLE_CLOSING));
+  if((stream->flags & UV_HANDLE_CLOSING))
+    return;
 
   if (stream->connect_req) {
     uv__stream_connect(stream);
