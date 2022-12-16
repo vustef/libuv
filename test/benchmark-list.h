@@ -35,6 +35,8 @@ BENCHMARK_DECLARE (tcp_pump100_client)
 BENCHMARK_DECLARE (tcp_pump1_client)
 BENCHMARK_DECLARE (pipe_pump100_client)
 BENCHMARK_DECLARE (pipe_pump1_client)
+BENCHMARK_DECLARE (tcp_pump100_threads_client)
+BENCHMARK_DECLARE (tcp_pump1_threads_client)
 
 BENCHMARK_DECLARE (tcp_multi_accept2)
 BENCHMARK_DECLARE (tcp_multi_accept4)
@@ -81,6 +83,7 @@ BENCHMARK_DECLARE (million_async)
 BENCHMARK_DECLARE (million_timers)
 HELPER_DECLARE    (tcp4_blackhole_server)
 HELPER_DECLARE    (tcp_pump_server)
+HELPER_DECLARE    (tcp_pump_threads_server)
 HELPER_DECLARE    (pipe_pump_server)
 HELPER_DECLARE    (tcp4_echo_server)
 HELPER_DECLARE    (pipe_echo_server)
@@ -105,6 +108,12 @@ TASK_LIST_START
 
   BENCHMARK_ENTRY  (tcp_pump1_client)
   BENCHMARK_HELPER (tcp_pump1_client, tcp_pump_server)
+
+  BENCHMARK_ENTRY  (tcp_pump100_threads_client)
+  BENCHMARK_HELPER (tcp_pump100_threads_client, tcp_pump_threads_server)
+
+  BENCHMARK_ENTRY  (tcp_pump1_threads_client)
+  BENCHMARK_HELPER (tcp_pump1_threads_client, tcp_pump_threads_server)
 
   BENCHMARK_ENTRY  (tcp4_pound_100)
   BENCHMARK_HELPER (tcp4_pound_100, tcp4_echo_server)
