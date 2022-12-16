@@ -272,7 +272,7 @@ static void maybe_connect_some(void) {
          max_connect_socket < write_sockets + MAX_SIMULTANEOUS_CONNECTS) {
     if (type == TCP) {
       tcp = &tcp_write_handles[max_connect_socket++];
-      uv_stream_set_blocking(tcp, 1);
+      //uv_stream_set_blocking(tcp, 1);
 
       r = uv_tcp_init(loop, tcp);
       ASSERT(r == 0);

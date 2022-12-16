@@ -692,12 +692,12 @@ static void uv__drain(uv_stream_t* stream) {
 }
 
 
-static ssize_t uv__writev(int fd, struct iovec* vec, size_t n) {
-  if (n == 1)
-    return write(fd, vec->iov_base, vec->iov_len);
-  else
-    return writev(fd, vec, n);
-}
+// static ssize_t uv__writev(int fd, struct iovec* vec, size_t n) {
+//   if (n == 1)
+//     return write(fd, vec->iov_base, vec->iov_len);
+//   else
+//     return writev(fd, vec, n);
+// }
 
 
 static size_t uv__write_req_size(uv_write_t* req) {
@@ -917,11 +917,11 @@ static void uv__write(uv_stream_t* stream) {
     if (stream->flags & UV_CONC_WRITTING) {
       if (!(stream->flags & UV_HANDLE_BLOCKING_WRITES))
         return;
-    //   do {
-    //     UV_LOOPLOCK(loop, UV_LOOP_UNLOCK);
-    //     usleep(1); /* let the other thread run TODO: how often it happens? run uvl_loop instead? */
-    //     UV_LOOPLOCK(loop, UV_LOOP_LOCK);
-    //   } while(stream->flags & UV_CONC_WRITTING);
+      do {
+        UV_LOOPLOCK(loop, UV_LOOP_UNLOCK);
+        usleep(1); /* let the other thread run TODO: how often it happens? run uvl_loop instead? */
+        UV_LOOPLOCK(loop, UV_LOOP_LOCK);
+      } while(stream->flags & UV_CONC_WRITTING);
     }
 
     q = QUEUE_HEAD(&stream->write_queue);
@@ -935,9 +935,9 @@ static void uv__write(uv_stream_t* stream) {
 
     /* Ensure the handle isn't sent again in case this is a partial write. */
     if (n >= 0) {
-      if (n != 8192) {
-        fprintf(stderr, "N: %d\n", n);
-      }
+    //   if (n != 8192) {
+    //     fprintf(stderr, "N: %d\n", n);
+    //   }
       req->send_handle = NULL;
       if (uv__write_req_update(stream, req, n)) {
         uv__write_req_finish(req);
@@ -1492,9 +1492,9 @@ int uv_write2(uv_write_t* req,
   if (stream->connect_req) {
     /* Still connecting, do nothing. */
   }
-//   else if (empty_queue) {
-//     uv__write(stream);
-//   }
+  else if (empty_queue) {
+    uv__write(stream);
+  }
   else {
     /*
      * blocking streams should never have anything in the queue.
