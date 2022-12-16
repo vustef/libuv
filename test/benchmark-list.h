@@ -32,9 +32,11 @@ BENCHMARK_DECLARE (tcp4_pound_1000)
 BENCHMARK_DECLARE (pipe_pound_100)
 BENCHMARK_DECLARE (pipe_pound_1000)
 BENCHMARK_DECLARE (tcp_pump100_client)
+BENCHMARK_DECLARE (tcp_pump10_client)
 BENCHMARK_DECLARE (tcp_pump1_client)
 BENCHMARK_DECLARE (pipe_pump100_client)
 BENCHMARK_DECLARE (pipe_pump1_client)
+BENCHMARK_DECLARE (tcp_pump10_threads_client)
 BENCHMARK_DECLARE (tcp_pump100_threads_client)
 BENCHMARK_DECLARE (tcp_pump1_threads_client)
 
@@ -106,11 +108,16 @@ TASK_LIST_START
   BENCHMARK_ENTRY  (tcp_pump100_client)
   BENCHMARK_HELPER (tcp_pump100_client, tcp_pump_server)
 
+  BENCHMARK_ENTRY  (tcp_pump10_client)
+  BENCHMARK_HELPER (tcp_pump10_client, tcp_pump_server)
+
   BENCHMARK_ENTRY  (tcp_pump1_client)
   BENCHMARK_HELPER (tcp_pump1_client, tcp_pump_server)
 
   BENCHMARK_ENTRY  (tcp_pump100_threads_client)
   BENCHMARK_HELPER (tcp_pump100_threads_client, tcp_pump_threads_server)
+  BENCHMARK_ENTRY  (tcp_pump10_threads_client)
+  BENCHMARK_HELPER (tcp_pump10_threads_client, tcp_pump_threads_server)
 
   BENCHMARK_ENTRY  (tcp_pump1_threads_client)
   BENCHMARK_HELPER (tcp_pump1_threads_client, tcp_pump_threads_server)

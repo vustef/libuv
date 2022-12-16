@@ -33,7 +33,7 @@ static int TARGET_CONNECTIONS;
 
 #define PRINT_STATS                 0
 #define STATS_INTERVAL              1000 /* msec */
-#define STATS_COUNT                 5
+#define STATS_COUNT                 10
 
 
 static void do_write(uv_stream_t*);
@@ -116,7 +116,8 @@ static void show_stats(uv_timer_t* handle) {
         uv_close((uv_handle_t*) &pipe_write_handles[i], NULL);
     }
 
-    exit(0);
+    i = uv_timer_stop(handle);
+    ASSERT(i == 0);
   }
 
   /* Reset read and write counters */
@@ -189,14 +190,30 @@ static void read_cb(uv_stream_t* stream, ssize_t bytes, const uv_buf_t* buf) {
 
 
 static void write_cb(uv_write_t* req, int status) {
-  ASSERT(status == 0);
+  uv_handle_t* handle = (uv_handle_t*) req->handle;
 
   req_free((uv_req_t*) req);
 
-  nsent += sizeof write_buffer;
-  nsent_total += sizeof write_buffer;
+  if(status != 0) {
+    if(status != UV_ECANCELED) {
+      fprintf(stderr, "uv_write error: %s\n", uv_strerror(status));
+      ASSERT(status == UV_EPIPE);
+      uv_close(handle, NULL);
+    }
+    return;
+  }
 
-  do_write((uv_stream_t*) req->handle);
+  if(!uv_is_closing(handle)) {/* TODO: fix the logic in libuv */
+    nsent += sizeof write_buffer;
+    nsent_total += sizeof write_buffer;
+    do_write((uv_stream_t*) handle);
+  }
+
+//   ASSERT(status == 0);
+//   req_free((uv_req_t*) req);
+//   nsent += sizeof write_buffer;
+//   nsent_total += sizeof write_buffer;
+//   do_write((uv_stream_t*) req->handle);
 }
 
 
@@ -210,6 +227,9 @@ static void do_write(uv_stream_t* stream) {
 
   req = (uv_write_t*) req_alloc();
   r = uv_write(req, stream, &buf, 1, write_cb);
+  if(r)
+    fprintf(stderr, "uv_write error: %s\n", uv_strerror(r));
+  //ASSERT(req->bufs == NULL);
   ASSERT(r == 0);
 }
 
@@ -252,6 +272,7 @@ static void maybe_connect_some(void) {
          max_connect_socket < write_sockets + MAX_SIMULTANEOUS_CONNECTS) {
     if (type == TCP) {
       tcp = &tcp_write_handles[max_connect_socket++];
+      uv_stream_set_blocking(tcp, 1);
 
       r = uv_tcp_init(loop, tcp);
       ASSERT(r == 0);
@@ -476,7 +497,15 @@ BENCHMARK_IMPL(pipe_pump1_client) {
 }
 
 BENCHMARK_IMPL(tcp_pump100_client) {
-  tcp_pump(10);
+  tcp_pump(100);
+  uv_run(loop, UV_RUN_DEFAULT);
+
+  MAKE_VALGRIND_HAPPY();
+  return 0;
+}
+
+BENCHMARK_IMPL(tcp_pump10_client) {
+  tcp_pump(100);
   uv_run(loop, UV_RUN_DEFAULT);
 
   MAKE_VALGRIND_HAPPY();
@@ -493,6 +522,14 @@ BENCHMARK_IMPL(tcp_pump1_client) {
 
 
 BENCHMARK_IMPL(tcp_pump100_threads_client) {
+  tcp_pump(100);
+  locked_pool_threads_run();
+
+  MAKE_VALGRIND_HAPPY();
+  return 0;
+}
+
+BENCHMARK_IMPL(tcp_pump10_threads_client) {
   tcp_pump(10);
   locked_pool_threads_run();
 

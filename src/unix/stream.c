@@ -724,6 +724,12 @@ static int uv__write_req_update(uv_stream_t* stream,
   uv_buf_t* buf;
   size_t len;
 
+//   if (n > stream->write_queue_size) {
+//     fprintf(stderr, "n: %d\n", n);
+//     fprintf(stderr, "stream->write_queue_size: %d\n", stream->write_queue_size);
+//   }
+  
+  //fprintf(stderr, "stream->write_queue_size out: %d - %p\n", stream->write_queue_size, &stream);
   assert(n <= stream->write_queue_size);
   stream->write_queue_size -= n;
 
@@ -855,19 +861,23 @@ static int uv__try_write(uv_stream_t* stream,
     while (n == -1 && errno == EINTR);
   } else {
     stream->flags |= UV_CONC_WRITTING;
+    //struct iovec* vec = iov[0]
     UV_LOOPLOCK(loop, UV_LOOP_UNLOCK);
     do {
-      if (iovcnt == 1) {
-        n = write(fd, iov[0].iov_base, iov[0].iov_len);
-      } else {
-        n = writev(fd, iov, iovcnt);
-      }
+        if (iovcnt == 1) {
+            n = write(fd, iov[0].iov_base, iov[0].iov_len);
+        } else {
+            n = writev(fd, iov, iovcnt);
+        }
+      //n = uv__writev(fd, iov, iovcnt);
     }
     while (n == -1 && errno == EINTR);
     UV_LOOPLOCK(loop, UV_LOOP_LOCK);
     assert(stream->flags & UV_CONC_WRITTING);
     stream->flags &= ~UV_CONC_WRITTING;
   }
+
+  //fprintf(stderr, "n: %d\n", n);
 
   if (n >= 0)
     return n;
@@ -907,11 +917,11 @@ static void uv__write(uv_stream_t* stream) {
     if (stream->flags & UV_CONC_WRITTING) {
       if (!(stream->flags & UV_HANDLE_BLOCKING_WRITES))
         return;
-      do {
-        UV_LOOPLOCK(loop, UV_LOOP_UNLOCK);
-        usleep(0); /* let the other thread run TODO: how often it happens? run uvl_loop instead? */
-        UV_LOOPLOCK(loop, UV_LOOP_LOCK);
-      } while(stream->flags & UV_CONC_WRITTING);
+    //   do {
+    //     UV_LOOPLOCK(loop, UV_LOOP_UNLOCK);
+    //     usleep(1); /* let the other thread run TODO: how often it happens? run uvl_loop instead? */
+    //     UV_LOOPLOCK(loop, UV_LOOP_LOCK);
+    //   } while(stream->flags & UV_CONC_WRITTING);
     }
 
     q = QUEUE_HEAD(&stream->write_queue);
@@ -925,6 +935,9 @@ static void uv__write(uv_stream_t* stream) {
 
     /* Ensure the handle isn't sent again in case this is a partial write. */
     if (n >= 0) {
+      if (n != 8192) {
+        fprintf(stderr, "N: %d\n", n);
+      }
       req->send_handle = NULL;
       if (uv__write_req_update(stream, req, n)) {
         uv__write_req_finish(req);
@@ -971,7 +984,8 @@ static void uv__write_callbacks(uv_stream_t* stream) {
     uv__req_unregister(stream->loop, req);
 
     if (req->bufs != NULL) {
-      stream->write_queue_size -= uv__write_req_size(req);
+      //fprintf(stderr, "uv__write_req_size(req): %d\n", uv__write_req_size(req));
+      stream->write_queue_size -= uv__write_req_size(req); // TODO @vustef: This is doubling subtraction, since other req might have come, and we pick that one here...
       if (req->bufs != req->bufsml)
         uv__free(req->bufs);
       req->bufs = NULL;
@@ -1466,6 +1480,7 @@ int uv_write2(uv_write_t* req,
   req->nbufs = nbufs;
   req->write_index = 0;
   stream->write_queue_size += uv__count_bufs(bufs, nbufs);
+  //fprintf(stderr, "stream->write_queue_size in: %d - %p\n", stream->write_queue_size, &stream);
 
   /* Append the request to write_queue. */
   QUEUE_INSERT_TAIL(&stream->write_queue, &req->queue);
@@ -1477,9 +1492,9 @@ int uv_write2(uv_write_t* req,
   if (stream->connect_req) {
     /* Still connecting, do nothing. */
   }
-  else if (empty_queue) {
-    uv__write(stream);
-  }
+//   else if (empty_queue) {
+//     uv__write(stream);
+//   }
   else {
     /*
      * blocking streams should never have anything in the queue.

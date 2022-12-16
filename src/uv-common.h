@@ -124,7 +124,7 @@ enum {
   UV_HANDLE_POLL_SLOW                   = 0x01000000,
 
   /* Only used by uv_process_t handles. */
-  UV_HANDLE_REAP                        = 0x10000000,
+  UV_HANDLE_REAP          = 0x10000000,
   UV_CONC_WRITTING        = 0x20000000,/* Handle is running concurrent write */
   UV_CONC_READING         = 0x40000000,/* Handle is running concurrent read */
   UV_CONC_RUNNING         = 0x80000000 /* Handle is running concurrent syscalls */
