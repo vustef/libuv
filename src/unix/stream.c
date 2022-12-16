@@ -1110,7 +1110,7 @@ static void uv__read(uv_stream_t* stream) {
   stream->flags &= ~UV_HANDLE_READ_PARTIAL;
 
   /* uv__io_t->running should prevent reentering to this function */
-  //assert(!(stream->flags & UV_CONC_READING));
+  assert(!(stream->flags & UV_CONC_READING));
 
   /* Prevent loop starvation when the data comes in as fast as (or faster than)
    * we can read it. XXX Need to rearm fd if we switch to edge-triggered I/O.
@@ -1139,15 +1139,15 @@ static void uv__read(uv_stream_t* stream) {
     assert(uv__stream_fd(stream) >= 0);
 
     if (!is_ipc) {
-      //stream->flags |= UV_CONC_READING;
-      //UV_LOOPLOCK(stream->loop, UV_LOOP_UNLOCK);
+      stream->flags |= UV_CONC_READING;
+      UV_LOOPLOCK(stream->loop, UV_LOOP_UNLOCK);
       do {
         nread = read(uv__stream_fd(stream), buf.base, buf.len);
       }
       while (nread < 0 && errno == EINTR);
-    //   UV_LOOPLOCK(stream->loop, UV_LOOP_LOCK);
-    //   assert(stream->flags & UV_CONC_READING);
-    //   stream->flags &= ~UV_CONC_READING;
+      UV_LOOPLOCK(stream->loop, UV_LOOP_LOCK);
+      assert(stream->flags & UV_CONC_READING);
+      stream->flags &= ~UV_CONC_READING;
     } else {
       /* ipc uses recvmsg */
       msg.msg_flags = 0;
