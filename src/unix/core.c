@@ -318,25 +318,15 @@ static void uv__finish_close(uv_handle_t* handle) {
 static void uv__run_closing_handles(uv_loop_t* loop) {
   uv_handle_t* p;
   uv_handle_t* q;
-  uv_handle_t* d = NULL;
 
-  do {
-    p = loop->closing_handles;
-    loop->closing_handles = NULL;
+  p = loop->closing_handles;
+  loop->closing_handles = NULL;
 
-    while (p) {
-      q = p->next_closing;
-      if((p->flags & UV_CONC_RUNNING) == 0)
-        uv__finish_close(p);
-      else {
-        p->next_closing = d;
-        d = p; /* defer actual closing to the running thread */
-      }
-      p = q;
-    }
+  while (p) {
+    q = p->next_closing;
+    uv__finish_close(p);
+    p = q;
   }
-  while(loop->closing_handles);
-  loop->closing_handles = d;
 }
 
 

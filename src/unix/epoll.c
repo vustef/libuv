@@ -161,23 +161,19 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
     /* XXX Future optimization: do EPOLL_CTL_MOD lazily if we stop watching
      * events, skip the syscall and squelch the events after epoll_wait().
      */
-    if (!w->running) {
-      if (epoll_ctl(loop->backend_fd, op, w->fd, &e)) {
-        if (errno != EEXIST)
-          abort();
+        if (epoll_ctl(loop->backend_fd, op, w->fd, &e)) {
+            if (errno != EEXIST)
+                abort();
 
-        assert(op == EPOLL_CTL_ADD);
+            assert(op == EPOLL_CTL_ADD);
 
-        /* We've reactivated a file descriptor that's been watched before. */
-        if (epoll_ctl(loop->backend_fd, EPOLL_CTL_MOD, w->fd, &e))
-          abort();
-      }
-      w->events = w->pevents;
-    } else {
-      epoll_ctl(loop->backend_fd, EPOLL_CTL_DEL, w->fd, &e);
-      w->events = 0;
+            /* We've reactivated a file descriptor that's been watched before. */
+            if (epoll_ctl(loop->backend_fd, EPOLL_CTL_MOD, w->fd, &e))
+                abort();
+        }
+
+        w->events = w->pevents;
     }
-  }
 
   sigmask = 0;
   if (loop->flags & UV_LOOP_BLOCK_SIGPROF) {
@@ -341,8 +337,6 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
         continue;
       }
 
-      /* TODO: assert(w->running == 0); supposed to be disarmed.. but no */
-
       /* Give users only events they're interested in. Prevents spurious
        * callbacks when previous callback invocation in this loop has stopped
        * the current watcher. Also, filters out events that users has not
@@ -375,11 +369,9 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
          */
         if (w == &loop->signal_io_watcher) {
           have_signals = 1;
-        } else if (!w->running) {
-          w->running = 1;
-          /* can release lock and allow other threads to run the loop */
-          w->cb(loop, w, pe->events);
-          w->running = 0;
+        } else {
+            uv__metrics_update_idle_time(loop);
+            w->cb(loop, w, pe->events);
         }
 
         nevents++;
