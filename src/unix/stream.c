@@ -907,11 +907,6 @@ static void uv__write(uv_stream_t* stream) {
     if (stream->flags & UV_CONC_WRITTING) {
       if (!(stream->flags & UV_HANDLE_BLOCKING_WRITES))
         return;
-      do {
-        UV_LOOPLOCK(loop, UV_LOOP_UNLOCK);
-        usleep(0); /* let the other thread run TODO: how often it happens? run uvl_loop instead? */
-        UV_LOOPLOCK(loop, UV_LOOP_LOCK);
-      } while(stream->flags & UV_CONC_WRITTING);
     }
 
     q = QUEUE_HEAD(&stream->write_queue);
