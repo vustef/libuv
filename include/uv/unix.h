@@ -98,7 +98,6 @@ struct uv__io_s {
   unsigned int pevents; /* Pending event mask i.e. mask at next tick. */
   unsigned int events;  /* Current event mask. */
   int fd;
-  int running; /* Not the best idea, better to control pevents mask */
   UV_IO_PRIVATE_PLATFORM_FIELDS
 };
 
